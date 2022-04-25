@@ -3,83 +3,48 @@ import path from 'path'
 import matter from 'gray-matter'
 import { remark } from 'remark'
 import html from 'remark-html'
+import Butter from 'buttercms';
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 
-export function getSortedPostsData() {
-  // Get file names under /posts
-  const fileNames = fs.readdirSync(postsDirectory)
-  const allPostsData = fileNames.map(fileName => {
-    // Remove ".md" from file name to get id
-    const id = fileName.replace(/\.md$/, '')
+export async function getSortedPostsData() {
+  const butter = Butter(process.env.BUTTER_API);
 
-    // Read markdown file as string
-    const fullPath = path.join(postsDirectory, fileName)
-    const fileContents = fs.readFileSync(fullPath, 'utf8')
-
-    // Use gray-matter to parse the post metadata section
-    const matterResult = matter(fileContents)
-
-    // Combine the data with the id
-    return {
-      id,
-      ...matterResult.data
-    }
-  })
-  // Sort posts by date
-  return allPostsData.sort(({ date: a }, { date: b }) => {
-    if (a < b) {
-      return 1
-    } else if (a > b) {
-      return -1
-    } else {
-      return 0
-    }
-  })
-}
-
-export function getAllPostIds() {
-  const fileNames = fs.readdirSync(postsDirectory)
-
-  // Returns an array that looks like this:
-  // [
-  //   {
-  //     params: {
-  //       id: 'ssg-ssr'
-  //     }
-  //   },
-  //   {
-  //     params: {
-  //       id: 'pre-rendering'
-  //     }
-  //   }
-  // ]
-  return fileNames.map(fileName => {
-    return {
-      params: {
-        id: fileName.replace(/\.md$/, '')
+  const response = await butter.category.retrieve('discovery', {include: 'recent_posts'})
+  return response.data.data.recent_posts.map(post => {
+      return {
+        id: post.slug,
+        date: post.created,
+        title: post.title
       }
-    }
-  })
+    })
 }
 
-export async function getPostData(id: String ) {
-  const fullPath = path.join(postsDirectory, `${id}.md`)
-  const fileContents = fs.readFileSync(fullPath, 'utf8')
+export async function getAllPostIds() {
+  const butter = Butter(process.env.BUTTER_API);
 
-  // Use gray-matter to parse the post metadata section
-  const matterResult = matter(fileContents)
+  const response = await butter.category.retrieve('discovery', {include: 'recent_posts'})
+  return response.data.data.recent_posts.map(post => {
+      return {
+        params: {
+          id: post.slug
+        }
+      }
+    })
+}
 
-  // Use remark to convert markdown into HTML string
-  const processedContent = await remark()
-    .use(html)
-    .process(matterResult.content)
-  const contentHtml = processedContent.toString()
+export async function getPostData(id: string) {
+  const butter = Butter(process.env.BUTTER_API);
 
-  // Combine the data with the id and contentHtml
+  const response = await butter.post.retrieve(id)
+
   return {
-    id,
-    contentHtml,
-    ...matterResult.data
+    id: response.data.data.slug,
+    contentHtml: response.data.data.body,
+    date: response.data.data.created,
+    title: response.data.data.title,
+    category: response.data.data.categories[0].name,
+    author: response.data.data.author.first_name + ' ' + response.data.data.author.last_name
   }
+ 
 }

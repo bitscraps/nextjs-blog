@@ -15,7 +15,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const paths = getAllPostIds()
+  const paths = await getAllPostIds()
   return {
     paths,
     fallback: false
@@ -29,6 +29,8 @@ export default function Post({
     title: string
     date: string
     contentHtml: string
+    category: string
+    author: string
   }
 }) {  return (
     <Layout>
@@ -37,7 +39,12 @@ export default function Post({
       </Head>
       <article>
         <h1 className={utilStyles.headingXl}>{postData.title}</h1>
+        
         <div className={utilStyles.lightText}>
+          by {postData.author}
+          <br/>
+          filed in "{postData.category}"
+          <br />
           <Date dateString={postData.date} />
         </div>
         <div dangerouslySetInnerHTML={{ __html: postData.contentHtml }} />
